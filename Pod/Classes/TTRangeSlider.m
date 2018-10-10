@@ -29,6 +29,13 @@ const float TEXT_HEIGHT = 14;
 // strong reference needed for UIAccessibilityContainer
 // see http://stackoverflow.com/questions/13462046/custom-uiview-not-showing-accessibility-on-voice-over
 @property (nonatomic, strong) NSMutableArray *accessibleElements;
+
+
+@property (nonatomic, strong) CALayer *minNumberImage;
+@property (nonatomic, strong) CATextLayer *minNumberLabel;
+@property (nonatomic, strong) CALayer *maxNumberImage;
+@property (nonatomic, strong) CATextLayer *maxNumberLabel;
+
 @end
 
 /**
@@ -114,7 +121,6 @@ static const CGFloat kLabelsFontSize = 12.0f;
     self.minLabel.fontSize = kLabelsFontSize;
     self.minLabel.frame = CGRectMake(0, 0, 75, TEXT_HEIGHT);
     self.minLabel.contentsScale = [UIScreen mainScreen].scale;
-    self.minLabel.contentsScale = [UIScreen mainScreen].scale;
     if (self.minLabelColour == nil){
         self.minLabel.foregroundColor = self.tintColor.CGColor;
     } else {
@@ -136,6 +142,33 @@ static const CGFloat kLabelsFontSize = 12.0f;
     self.maxLabelFont = [UIFont systemFontOfSize:kLabelsFontSize];
     [self.layer addSublayer:self.maxLabel];
 
+    
+    //draw the minimum slider top imageText
+    self.minNumberImage = [CALayer layer];
+    self.minNumberImage.hidden = !self.leftHandleSelected;
+    [self.layer addSublayer:self.minNumberImage];
+    self.minNumberLabel = [[CATextLayer alloc] init];
+    self.minNumberLabel.alignmentMode = kCAAlignmentCenter;
+    self.minNumberLabel.fontSize = 12;
+    self.minNumberLabel.foregroundColor = [UIColor redColor].CGColor;
+    self.minNumberLabel.contentsScale = [UIScreen mainScreen].scale;
+    self.minNumberLabelFont = [UIFont systemFontOfSize:12];
+    [self.minNumberImage addSublayer:self.minNumberLabel];
+    
+    //draw the maximum slider top imageText
+    self.maxNumberImage = [CALayer layer];
+    self.maxNumberImage.hidden = !self.rightHandleSelected;
+    [self.layer addSublayer:self.maxNumberImage];
+    self.maxNumberLabel = [[CATextLayer alloc] init];
+    self.maxNumberLabel.alignmentMode = kCAAlignmentCenter;
+    self.maxNumberLabel.fontSize = 12;
+    self.maxNumberLabel.foregroundColor = [UIColor redColor].CGColor;
+    self.maxNumberLabel.contentsScale = [UIScreen mainScreen].scale;
+    self.maxNumberLabelFont = [UIFont systemFontOfSize:12];
+    [self.maxNumberImage addSublayer:self.maxNumberLabel];
+    
+    _hideNumberImage = YES;
+    
     // TODO Create a bundle that allows localization of default accessibility labels and hints
     if (!self.minLabelAccessibilityLabel || self.minLabelAccessibilityLabel.length == 0) {
       self.minLabelAccessibilityLabel = @"Left Handle";
@@ -291,6 +324,14 @@ static const CGFloat kLabelsFontSize = 12.0f;
     
     //positioning for the dist slider line
     self.sliderLineBetweenHandles.frame = CGRectMake(self.leftHandle.position.x, self.sliderLine.frame.origin.y, self.rightHandle.position.x-self.leftHandle.position.x, self.lineHeight);
+    
+    
+    CGFloat h = self.numberImage.size.height;
+    CGFloat margin = self.imageMargin ? self.imageMargin : 5;
+    CGFloat minTop = leftHandleCenter.y-(margin+h);
+    self.minNumberImage.position = CGPointMake(leftHandleCenter.x, minTop);
+    CGFloat maxTop = rightHandleCenter.y-(margin+h);
+    self.maxNumberImage.position = CGPointMake(rightHandleCenter.x, maxTop);
 }
 
 - (void)updateLabelPositions {
@@ -359,7 +400,17 @@ static const CGFloat kLabelsFontSize = 12.0f;
                 [self animateHandle:self.rightHandle withSelection:YES];
             }
         }
-
+        
+        //set touched handle image
+        if (self.touchedHandleImage) {
+            if (self.leftHandleSelected) {
+                self.leftHandle.contents = (id)self.touchedHandleImage.CGImage;
+            }
+            if (self.rightHandleSelected) {
+                self.rightHandle.contents = (id)self.touchedHandleImage.CGImage;
+            }
+        }
+        
         if ([self.delegate respondsToSelector:@selector(didStartTouchesInRangeSlider:)]){
             [self.delegate didStartTouchesInRangeSlider:self];
         }
@@ -411,6 +462,19 @@ static const CGFloat kLabelsFontSize = 12.0f;
     [self updateLabelValues];
     [self updateAccessibilityElements];
 
+    //update textLabel string in top imageView
+    if (!self.hideNumberImage) {
+        NSNumberFormatter *formatter = (self.numberFormatterOverride != nil) ? self.numberFormatterOverride : self.decimalNumberFormatter;
+        if (self.leftHandleSelected) {
+            self.minNumberImage.hidden = NO;
+            self.minNumberLabel.string = [formatter stringFromNumber:@(self.selectedMinimum)];;
+        }
+        if (self.rightHandleSelected) {
+            self.maxNumberImage.hidden = NO;
+            self.maxNumberLabel.string = [formatter stringFromNumber:@(self.selectedMaximum)];
+        }
+    }
+    
     //update the delegate
     if ([self.delegate respondsToSelector:@selector(rangeSlider:didChangeSelectedMinimumValue:andMaximumValue:)] &&
         (self.leftHandleSelected || self.rightHandleSelected)){
@@ -464,6 +528,10 @@ static const CGFloat kLabelsFontSize = 12.0f;
         self.rightHandleSelected = NO;
         [self animateHandle:self.rightHandle withSelection:NO];
     }
+    
+    self.minNumberImage.hidden = YES;
+    self.maxNumberImage.hidden = YES;
+    
     if ([self.delegate respondsToSelector:@selector(didEndTouchesInRangeSlider:)]) {
         [self.delegate didEndTouchesInRangeSlider:self];
     }
@@ -690,6 +758,86 @@ static const CGFloat kLabelsFontSize = 12.0f;
     _barSidePadding = barSidePadding;
     [self updateLabelPositions];
 }
+
+
+#pragma mark - 自定义
+- (void)setNumberImage:(UIImage *)numberImage {
+    _numberImage = numberImage;
+    self.minNumberImage.contents = (id)numberImage.CGImage;
+    self.maxNumberImage.contents = (id)numberImage.CGImage;
+    
+    CGFloat w = numberImage.size.width;
+    CGFloat h = numberImage.size.height;
+
+    self.minNumberImage.frame = CGRectMake(0, 0, w, h);
+    self.maxNumberImage.frame = CGRectMake(0, 0, w, h);
+    
+    [self updateNumberLabelPositions];
+}
+
+- (void)updateNumberLabelPositions {
+    CGFloat w = self.minNumberImage.frame.size.width;
+    CGFloat h = self.maxNumberImage.frame.size.height;
+    
+    if (self.minNumberLabelFont) {
+        NSString *minNumber = self.minNumberLabel.string;
+        if (!minNumber) minNumber = @"0";
+        CGSize minSize = [minNumber boundingRectWithSize:CGSizeMake(w, h) options:NSStringDrawingUsesLineFragmentOrigin attributes:@{NSFontAttributeName:self.minNumberLabelFont} context:nil].size;
+        self.minNumberLabel.frame = CGRectMake(0, (h-minSize.height)/2.0, w, minSize.height);
+    }
+    
+    if (self.maxNumberLabelFont) {
+        NSString *maxNumber = self.maxNumberLabel.string;
+        if (!maxNumber) maxNumber = @"0";
+        CGSize maxSize = [maxNumber boundingRectWithSize:CGSizeMake(w, h) options:NSStringDrawingUsesLineFragmentOrigin attributes:@{NSFontAttributeName:self.maxNumberLabelFont} context:nil].size;
+        self.maxNumberLabel.frame = CGRectMake(0, (h-maxSize.height)/2.0, w, maxSize.height);
+    }
+}
+
+- (void)setMinNumberLabelString:(NSString *)minNumberLabelString {
+    self.minNumberLabel.string = minNumberLabelString;
+    //更新数字位置
+    [self updateNumberLabelPositions];
+}
+
+- (void)setMaxNumberLabelString:(NSString *)maxNumberLabelString {
+    self.maxNumberLabel.string = maxNumberLabelString;
+    
+    [self updateNumberLabelPositions];
+}
+
+- (void)setMinNumberLabelColor:(UIColor *)minNumberLabelColor {
+    _minNumberLabelColor = minNumberLabelColor;
+    self.minNumberLabel.foregroundColor = _minNumberLabelColor.CGColor;
+}
+
+- (void)setMaxNumberLabelColor:(UIColor *)maxNumberLabelColor {
+    _maxNumberLabelColor = maxNumberLabelColor;
+    self.maxNumberLabel.foregroundColor = _maxNumberLabelColor.CGColor;
+}
+
+- (void)setMinNumberLabelFont:(UIFont *)minNumberLabelFont {
+    _minNumberLabelFont = minNumberLabelFont;
+    self.minNumberLabel.font = (__bridge CFTypeRef)_minNumberLabelFont.fontName;
+    self.minNumberLabel.fontSize = _minNumberLabelFont.pointSize;
+    
+    [self updateNumberLabelPositions];
+}
+
+- (void)setMaxNumberLabelFont:(UIFont *)maxNumberLabelFont {
+    _maxNumberLabelFont = maxNumberLabelFont;
+    self.maxNumberLabel.font = (__bridge CFTypeRef)_maxNumberLabelFont.fontName;
+    self.maxNumberLabel.fontSize = _maxNumberLabelFont.pointSize;
+    
+    [self updateNumberLabelPositions];
+}
+
+- (void)setTouchedHandleImage:(UIImage *)touchedHandleImage {
+    _touchedHandleImage = touchedHandleImage;
+}
+
+
+
 
 #pragma mark - UIAccessibility
 

@@ -193,4 +193,59 @@ typedef NS_ENUM(NSInteger, LabelPosition) {
  */
 @property (nonatomic, assign) LabelPosition labelPosition;
 
+
+
+
+#pragma mark - 自定义
+
+/**
+ 是否隐藏数字图片，YES隐藏，NO显示，默认YES
+ */
+@property (nonatomic, assign) IBInspectable BOOL hideNumberImage;
+
+/**
+ 数字图片
+ */
+@property (nonatomic, strong) IBInspectable UIImage *numberImage;
+
+/**
+ 数字图片和滑块的间距
+ */
+@property (nonatomic, assign) IBInspectable CGFloat imageMargin;
+
+/**
+ 数字图片中左侧数字
+ */
+@property (nonatomic, strong) IBInspectable NSString *minNumberLabelString;
+
+/**
+ 数字图片中右侧数字
+ */
+@property (nonatomic, strong) IBInspectable NSString *maxNumberLabelString;
+
+/**
+ 数字图片中左侧数字颜色
+ */
+@property (nonatomic, strong) IBInspectable UIColor *minNumberLabelColor;
+
+/**
+ 数字图片中右侧数字颜色
+ */
+@property (nonatomic, strong) IBInspectable UIColor *maxNumberLabelColor;
+
+/**
+ 数字图片中左侧数字字体
+ */
+@property (nonatomic, strong) IBInspectable UIFont *minNumberLabelFont;
+
+/**
+ 数字图片中右侧数字字体
+ */
+@property (nonatomic, strong) IBInspectable UIFont *maxNumberLabelFont;
+
+/**
+ 滑动触摸时显示的图片
+ */
+@property (nonatomic, strong) UIImage *touchedHandleImage;
+
 @end
